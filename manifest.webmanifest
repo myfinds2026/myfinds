@@ -1,0 +1,9 @@
+{
+  "name": "我的 Threads 書單",
+  "short_name": "書單",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f4ee",
+  "theme_color": "#f7f4ee",
+  "lang": "zh-Hant"
+}

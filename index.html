@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f7f4ee" />
+  <title>我的 Threads 書單</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    :root{
+      --bg:#f7f4ee; --card:#fffdf8; --ink:#222; --muted:#777;
+      --line:#e7e0d5; --accent:#222; --soft:#eee7dc;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:720px;margin:auto;padding:calc(18px + env(safe-area-inset-top)) 16px calc(90px + env(safe-area-inset-bottom))}
+    header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px}
+    h1{font-size:30px;margin:0;letter-spacing:-.5px}
+    .sub{color:var(--muted);font-size:14px;margin-top:4px}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+    .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;text-align:center}
+    .stat b{display:block;font-size:20px}
+    .toolbar{display:grid;grid-template-columns:1fr auto;gap:8px;margin:12px 0}
+    input,select,textarea,button{font:inherit}
+    .search{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:14px;background:#fff}
+    .btn{border:0;border-radius:14px;padding:12px 14px;background:var(--accent);color:#fff;font-weight:700}
+    .btn.secondary{background:var(--soft);color:var(--ink)}
+    .filters{display:flex;gap:8px;overflow:auto;padding-bottom:6px}
+    .chip{white-space:nowrap;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 12px;border-radius:999px}
+    .chip.active{background:var(--ink);color:white}
+    .list{display:grid;gap:10px;margin-top:12px}
+    .book{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px}
+    .book-top{display:flex;justify-content:space-between;gap:14px}
+    .title{font-weight:800;font-size:19px}
+    .author,.meta,.review{color:var(--muted);font-size:14px}
+    .review{margin-top:10px;line-height:1.55;color:#555;white-space:pre-wrap}
+    .badge{font-size:12px;background:var(--soft);padding:6px 9px;border-radius:999px;height:max-content}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .actions button,.actions a{border:1px solid var(--line);background:white;color:var(--ink);padding:8px 10px;border-radius:10px;text-decoration:none;font-size:13px}
+    .empty{text-align:center;color:var(--muted);padding:40px 10px}
+    dialog{border:0;border-radius:22px;padding:0;max-width:650px;width:calc(100% - 24px);background:var(--card)}
+    dialog::backdrop{background:rgba(0,0,0,.35)}
+    .modal{padding:18px}
+    .modal h2{margin:0 0 14px}
+    .field{margin:10px 0}
+    .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    .field input,.field textarea,.field select{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:white}
+    .field textarea{min-height:95px;resize:vertical}
+    .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+    .note{font-size:12px;color:var(--muted);line-height:1.5}
+    @media (max-width:480px){ h1{font-size:26px}.toolbar{grid-template-columns:1fr}.toolbar .btn{width:100%} }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>📚 我的 Threads 書單</h1>
+      <div class="sub">看到好書，就收進來。不要再靠截圖考古。</div>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><b id="wantCount">0</b><span>想讀</span></div>
+    <div class="stat"><b id="readingCount">0</b><span>閱讀中</span></div>
+    <div class="stat"><b id="doneCount">0</b><span>讀完</span></div>
+  </div>
+
+  <div class="toolbar">
+    <input id="search" class="search" placeholder="搜尋書名、作者、推薦者、書評…" />
+    <button class="btn" id="addBtn">＋ 收藏推薦</button>
+  </div>
+
+  <div class="filters" id="filters">
+    <button class="chip active" data-filter="全部">全部</button>
+    <button class="chip" data-filter="想讀">想讀</button>
+    <button class="chip" data-filter="閱讀中">閱讀中</button>
+    <button class="chip" data-filter="讀完">讀完</button>
+  </div>
+
+  <div id="list" class="list"></div>
+</div>
+
+<dialog id="bookDialog">
+  <form method="dialog" class="modal" id="bookForm">
+    <h2 id="dialogTitle">收藏一本書</h2>
+    <input type="hidden" id="editId">
+    <div class="field">
+      <label>書名 *</label>
+      <input id="bookTitle" required placeholder="例如：老人與海">
+    </div>
+    <div class="field">
+      <label>作者</label>
+      <input id="author" placeholder="例如：海明威">
+    </div>
+    <div class="field">
+      <label>推薦者</label>
+      <input id="recommender" placeholder="例如：@username">
+    </div>
+    <div class="field">
+      <label>推薦內容／書評</label>
+      <textarea id="review" placeholder="把對方推薦這本書的重點記下來"></textarea>
+    </div>
+    <div class="field">
+      <label>Threads 原文網址</label>
+      <input id="threadUrl" type="url" placeholder="https://www.threads.net/...">
+    </div>
+    <div class="field">
+      <label>閱讀狀態</label>
+      <select id="status">
+        <option>想讀</option>
+        <option>閱讀中</option>
+        <option>讀完</option>
+      </select>
+    </div>
+    <div class="note">第一版資料只存在這台裝置的瀏覽器裡；不會上傳到任何伺服器。</div>
+    <div class="modal-actions">
+      <button class="btn secondary" value="cancel" type="button" id="cancelBtn">取消</button>
+      <button class="btn" type="submit">儲存</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const KEY = "threads_booklist_v1";
+let books = JSON.parse(localStorage.getItem(KEY) || "[]");
+let currentFilter = "全部";
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function save(){
+  localStorage.setItem(KEY, JSON.stringify(books));
+  render();
+}
+function statusCount(name){ return books.filter(b=>b.status===name).length; }
+
+function render(){
+  $("#wantCount").textContent = statusCount("想讀");
+  $("#readingCount").textContent = statusCount("閱讀中");
+  $("#doneCount").textContent = statusCount("讀完");
+
+  const q = $("#search").value.trim().toLowerCase();
+  const filtered = books.filter(b => {
+    const f = currentFilter==="全部" || b.status===currentFilter;
+    const text = [b.title,b.author,b.recommender,b.review].join(" ").toLowerCase();
+    return f && (!q || text.includes(q));
+  }).sort((a,b)=>b.createdAt-a.createdAt);
+
+  const list = $("#list");
+  if(!filtered.length){
+    list.innerHTML = `<div class="empty">${books.length ? "沒有符合條件的書。" : "還沒有收藏。<br><br>按「＋ 收藏推薦」加入第一本書。"}</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(b => `
+    <article class="book">
+      <div class="book-top">
+        <div>
+          <div class="title">${esc(b.title)}</div>
+          <div class="author">${esc(b.author || "作者未填")}</div>
+          <div class="meta">${b.recommender ? "推薦者："+esc(b.recommender)+" · " : ""}${new Date(b.createdAt).toLocaleDateString("zh-TW")}</div>
+        </div>
+        <div class="badge">${esc(b.status)}</div>
+      </div>
+      ${b.review ? `<div class="review">${esc(b.review)}</div>` : ""}
+      <div class="actions">
+        ${b.threadUrl ? `<a href="${esc(b.threadUrl)}" target="_blank" rel="noopener">查看 Threads 原文</a>` : ""}
+        <button onclick="editBook('${b.id}')">編輯</button>
+        <button onclick="removeBook('${b.id}')">刪除</button>
+      </div>
+    </article>
+  `).join("");
+}
+
+function openForm(book=null){
+  $("#bookForm").reset();
+  $("#editId").value = "";
+  $("#dialogTitle").textContent = book ? "編輯收藏" : "收藏一本書";
+  if(book){
+    $("#editId").value = book.id;
+    $("#bookTitle").value = book.title || "";
+    $("#author").value = book.author || "";
+    $("#recommender").value = book.recommender || "";
+    $("#review").value = book.review || "";
+    $("#threadUrl").value = book.threadUrl || "";
+    $("#status").value = book.status || "想讀";
+  }
+  $("#bookDialog").showModal();
+}
+
+window.editBook = id => openForm(books.find(b=>b.id===id));
+window.removeBook = id => {
+  if(confirm("確定刪除這本書？")){
+    books = books.filter(b=>b.id!==id);
+    save();
+  }
+};
+
+$("#addBtn").addEventListener("click", ()=>openForm());
+$("#cancelBtn").addEventListener("click", ()=>$("#bookDialog").close());
+$("#search").addEventListener("input", render);
+
+$("#filters").addEventListener("click", e=>{
+  if(!e.target.matches(".chip")) return;
+  document.querySelectorAll(".chip").forEach(x=>x.classList.remove("active"));
+  e.target.classList.add("active");
+  currentFilter = e.target.dataset.filter;
+  render();
+});
+
+$("#bookForm").addEventListener("submit", e=>{
+  e.preventDefault();
+  const id = $("#editId").value;
+  const data = {
+    title: $("#bookTitle").value.trim(),
+    author: $("#author").value.trim(),
+    recommender: $("#recommender").value.trim(),
+    review: $("#review").value.trim(),
+    threadUrl: $("#threadUrl").value.trim(),
+    status: $("#status").value
+  };
+  if(!data.title) return;
+  if(id){
+    books = books.map(b => b.id===id ? {...b,...data} : b);
+  } else {
+    books.push({
+      id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
+      ...data,
+      createdAt: Date.now()
+    });
+  }
+  save();
+  $("#bookDialog").close();
+});
+
+render();
+
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
