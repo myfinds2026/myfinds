@@ -245,7 +245,7 @@ if("serviceWorker" in navigator){
 
 function backupData() {
 
-  const data = localStorage.getItem("threads-booklist-v1");
+  const data = localStorage.getItem(KEY);
     if (!data) {
 
     alert("目前沒有可備份的書單資料");
